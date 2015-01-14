@@ -1,24 +1,32 @@
 #!/bin/bash
 ## 
-## Created By: Gabriel Gonzalez (contact me at gabeg@bu.edu) 
+## CONTRIBUTORS: 
+## 
+##     * Gabriel Gonzalez (contact me at gabeg@bu.edu) 
+##     * ADB software writers 
 ## 
 ## 
-## Name:
+## LICENSE: 
 ## 
-##     droid
+##     The MIT License (MIT)
 ## 
 ## 
-## Syntax: 
+## NAME:
+## 
+##     droid - An Android file transfer service.
+## 
+## 
+## SYNTAX: 
 ## 
 ##     droid [-h] [[-t] [-r] <src> <dest>] 
 ## 
 ## 
-## Purpose:
+## PURPOSE:
 ## 
 ##     Transfer files to and from your Android device.
 ## 
 ## 
-## Keywords:
+## KEYWORDS:
 ## 
 ##     -h
 ##         Print the help screen.
@@ -32,7 +40,7 @@
 ##         onto the computer, destination.
 ## 
 ## 
-## Functions:
+## FUNCTIONS:
 ## 
 ##     print_usage      - Print program usage.
 ## 
@@ -40,19 +48,26 @@
 ##     file_transfer    - Transfer files between the computer and the Android device.
 ## 
 ## 
-## File Structure:
+## FILE STRUCTURE:
 ## 
 ##     * Print Usage Help
 ##     * Android File Transfer 
 ##     * Android File Transfer Parameter Verification
 ## 
 ## 
-## Modification History:
+## MODIFICATION HISTORY:
 ## 	
 ##     gabeg Jul 06 2014 <> Created.
 ## 
 ##     gabeg Dec 28 2014 <> Removed music sync functionality and added the ability to
 ##                          receive (pull) data from the Android device.
+## 
+## 
+## NOTICE: 
+## 
+##     I did not write any of the ADB software, thus I cannot take credit for that 
+##     code. The ADB license might not use The MIT License (MIT), thus this license 
+##     only applies to the lines of code that do not contain the "adb" command.
 ## 
 ## **********************************************************************************
 
