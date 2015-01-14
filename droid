@@ -1,0 +1,187 @@
+#!/bin/bash
+## 
+## Created By: Gabriel Gonzalez (contact me at gabeg@bu.edu) 
+## 
+## 
+## Name:
+## 
+##     droid
+## 
+## 
+## Syntax: 
+## 
+##     droid [-h] [[-t] [-r] <src> <dest>] 
+## 
+## 
+## Purpose:
+## 
+##     Transfer files to and from your Android device.
+## 
+## 
+## Keywords:
+## 
+##     -h
+##         Print the help screen.
+## 
+##     -t <src> <dst>
+##         Transfer the specified files from the computer, source, onto the Android
+##         device, destination.
+## 
+##     -r <src> <dst>
+##         Receive the specified files from the Android device, source, and move them
+##         onto the computer, destination.
+## 
+## 
+## Functions:
+## 
+##     print_usage      - Print program usage.
+## 
+##     android_debugger - Start the android debugger.
+##     file_transfer    - Transfer files between the computer and the Android device.
+## 
+## 
+## File Structure:
+## 
+##     * Print Usage Help
+##     * Android File Transfer 
+##     * Android File Transfer Parameter Verification
+## 
+## 
+## Modification History:
+## 	
+##     gabeg Jul 06 2014 <> Created.
+## 
+##     gabeg Dec 28 2014 <> Removed music sync functionality and added the ability to
+##                          receive (pull) data from the Android device.
+## 
+## **********************************************************************************
+
+
+
+## ================
+## GLOBAL VARIABLES
+## ================
+
+## Program arguments
+ARGV=("$@")
+
+## Program information
+PROG_NAME=`basename $0`
+
+
+
+## ###############################
+## ##### PRINT PROGRAM USAGE #####
+## ###############################
+
+## Print program usage
+function print_usage {
+    echo "Usage: droid [-h] [[-t] [-r] <src> <dest>]"
+    exit 1
+}
+
+
+
+## #################################
+## ##### ANDROID FILE TRANSFER #####
+## #################################
+
+## Start android debugger
+function android_debugger {
+    echo -n ":: Starting ADB..."
+    adb devices 1> /dev/null
+    echo "Done"
+}
+
+
+
+## Transfer files onto Android device
+function file_transfer {
+    
+    ## All user input
+    local opt=""
+    
+    ## Number of elements in user input array
+    local n="${#ARGV[@]}"
+    
+    ## Make sure files were specified
+    if [ ${n} -eq 0 ]; then print_usage; exit 1; fi
+    
+    ## User destination
+    local seclast=$[ ${n} - 2 ]
+    local last=$[ ${n} - 1 ]
+    local dest="${ARGV[${last}]}"
+    
+    ## Check that destination directory exists
+    case "${ARGV[0]}" in
+        "-t")
+            local dirExists=`adb shell ls -d "${dest}" \
+                             | grep -c 'No such file or directory'`
+            
+            if [ ${dirExists} -eq 1 ]; then
+                echo "${PROG_NAME}: The destination directory '${dest}' does not exist."
+                exit 1
+            fi
+            
+            opt="push"
+            ;;
+        
+        "-r")
+            if [ ! -d "${dest}" ]; then 
+                echo "${PROG_NAME}: The destination directory '${dest}' does not exist."
+                exit 1
+            fi
+            
+            opt="pull"
+            ;;
+    esac
+    
+    ## Copy files onto Android device
+    for item in "${ARGV[@]:1:${seclast}}"; do
+        if [[ "${item}" != "${dest}" ]]; then
+            echo -n "Copying '${item}'  ->  '${dest}'..." 
+            adb "${opt}" "${item}" "${dest}" 
+        fi
+    done
+}
+
+
+
+## ########################################################
+## ##### ANDROID FILE TRANSFER PARAMETER VERIFICATION #####
+## ########################################################
+
+## Transfer files between the computer and Android device
+function main {
+    
+    ## Check if help requested
+    if [[ "${ARGV[0]}" == "-h" ]]; then print_usage; exit 1; fi
+    
+    ## Start Android program
+    android_debugger
+    
+    ## Check user input
+    case "${ARGV[0]}" in
+        
+        ## Enable connection between the computer and Android device 
+        "")
+        ;;
+        
+        ## Transfer files between the computer and Android device
+        "-t"|"-r")
+            file_transfer 
+            ;;
+        
+        ## Print help screen
+        *)
+            print_usage
+            ;;
+    esac
+    
+    exit 0
+}
+
+
+
+## Run the program
+main 
