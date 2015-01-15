@@ -40,7 +40,7 @@ If you have any problems, feel free to email me at 'gabeg@bu.edu'.
 Potential Problems
 ==================
 
-N/A
+- TBD
 
 
 
