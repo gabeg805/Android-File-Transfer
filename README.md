@@ -11,8 +11,8 @@ Documentation
 =============
 
 Created as an upgrade to the adb interface, this program allows the user to move 
-files en masse using the '*' operator. Further documentation, such as usage, can be
-found in the header of the program.
+files en masse using the '*' operator. Further documentation can be found in the 
+header of the program.
 
 
 
@@ -22,7 +22,7 @@ Installation
 
 Update your PATH environment variable in your shell rc file with:
     
-    $ export PATH="${PATH}":"/PATH/TO/SCRIPT/droid
+    $ export PATH="${PATH}":"/PATH/TO/PROGRAM/droid
 
 Now the program is ready for use!
 
