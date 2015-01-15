@@ -77,10 +77,11 @@
 ## GLOBAL VARIABLES
 ## ================
 
-## Program arguments
-ARGV=("$@")
+## Change array delimeter
+IFS=$'\n'
 
 ## Program information
+ARGV=("$@")
 PROG_NAME=`basename $0`
 
 
@@ -91,7 +92,7 @@ PROG_NAME=`basename $0`
 
 ## Print program usage
 function print_usage {
-    echo "Usage: droid [-h] [[-t] [-r] <src> <dest>]"
+    echo "Usage: ${PROG_NAME} [-h] [[-t] [-r] <src> <dest>]"
     exit 1
 }
 
