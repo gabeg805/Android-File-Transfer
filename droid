@@ -3,7 +3,7 @@
 ## CONTRIBUTORS: 
 ## 
 ##     * Gabriel Gonzalez (gabeg@bu.edu) 
-##     * ADB software writers 
+##     * ADB developers
 ## 
 ## 
 ## LICENSE: 
@@ -18,7 +18,7 @@
 ## 
 ## SYNTAX: 
 ## 
-##     droid [-h] [[-t] [-r] <src> <dest>] 
+##     droid [-h] [[-s] [-r] <src> <dest>] 
 ## 
 ## 
 ## PURPOSE:
@@ -31,8 +31,8 @@
 ##     -h
 ##         Print the help screen.
 ## 
-##     -t <src> <dst>
-##         Transfer the specified files from the computer, source, onto the Android
+##     -s <src> <dst>
+##         Send the specified files from the computer, source, onto the Android
 ##         device, destination.
 ## 
 ##     -r <src> <dst>
@@ -45,7 +45,7 @@
 ##     print_usage      - Print program usage.
 ## 
 ##     android_debugger - Start the android debugger.
-##     file_transfer    - Transfer files between the computer and the Android device.
+##     file_send        - Send files between the computer and the Android device.
 ## 
 ## 
 ## FILE STRUCTURE:
@@ -92,7 +92,7 @@ PROG_NAME=`basename $0`
 
 ## Print program usage
 function print_usage {
-    echo "Usage: ${PROG_NAME} [-h] [[-t] [-r] <src> <dest>]"
+    echo "Usage: ${PROG_NAME} [-h] [[-s] [-r] <src> <dest>]"
     exit 1
 }
 
@@ -111,8 +111,8 @@ function android_debugger {
 
 
 
-## Transfer files onto Android device
-function file_transfer {
+## Send files onto Android device
+function file_send {
     
     ## All user input
     local opt=""
@@ -130,7 +130,7 @@ function file_transfer {
     
     ## Check that destination directory exists
     case "${ARGV[0]}" in
-        "-t")
+        "-s")
             local dirExists=`adb shell ls -d "${dest}" \
                              | grep -c 'No such file or directory'`
             
@@ -183,9 +183,9 @@ function main {
         "")
         ;;
         
-        ## Transfer files between the computer and Android device
-        "-t"|"-r")
-            file_transfer 
+        ## Send files between the computer and Android device
+        "-s"|"-r")
+            file_send 
             ;;
         
         ## Print help screen
