@@ -1,73 +1,23 @@
 #!/bin/bash
+## **********************************************************************************
 ## 
-## CONTRIBUTORS: 
+## Name:    droid
+## Author:  Gabriel Gonzalez, ADB Devs.
+## Email:   gabeg@bu.edu
+## License: The MIT License (MIT)
 ## 
-##     * Gabriel Gonzalez (gabeg@bu.edu) 
-##     * ADB developers
+## Syntax: droid [option] <argument>
+##         
+##         Use '--help' for more details.
 ## 
+## Description: An Android file transfer service.
+##              
+## Notes: None.
 ## 
-## LICENSE: 
-## 
-##     The MIT License (MIT)
-## 
-## 
-## NAME:
-## 
-##     droid - An Android file transfer service.
-## 
-## 
-## SYNTAX: 
-## 
-##     droid [-h] [[-s] [-r] <src> <dest>] 
-## 
-## 
-## PURPOSE:
-## 
-##     Transfer files to and from your Android device.
-## 
-## 
-## OPTIONS:
-## 
-##     -h
-##         Print the help screen.
-## 
-##     -s <src> <dst>
-##         Send the specified files from the computer, source, onto the Android
-##         device, destination.
-## 
-##     -r <src> <dst>
-##         Receive the specified files from the Android device, source, and move them
-##         onto the computer, destination.
-## 
-## 
-## FUNCTIONS:
-## 
-##     print_usage      - Print program usage.
-## 
-##     android_debugger - Start the android debugger.
-##     file_send        - Send files between the computer and the Android device.
-## 
-## 
-## FILE STRUCTURE:
-## 
-##     * Print Usage Help
-##     * Android File Transfer 
-##     * Android File Transfer Parameter Verification
-## 
-## 
-## MODIFICATION HISTORY:
-## 	
-##     gabeg Jul 06 2014 <> Created.
-## 
-##     gabeg Dec 28 2014 <> Removed music sync functionality and added the ability to
-##                          receive (pull) data from the Android device.
-## 
-## 
-## NOTICE: 
-## 
-##     I did not write any of the ADB software, thus I cannot take credit for that 
-##     code. The ADB license might not use The MIT License (MIT), thus this license 
-##     only applies to the lines of code that do not contain the "adb" command.
+## Notice: I did not write any of the ADB software, thus I cannot take credit for
+##         that code. The ADB license might not use The MIT License (MIT), thus this
+##         license only applies to the lines of code that do not contain the "adb"
+##         command.
 ## 
 ## **********************************************************************************
 
@@ -77,12 +27,48 @@
 ## GLOBAL VARIABLES
 ## ================
 
-## Change array delimeter
-IFS=$'\n'
-
-## Program information
 ARGV=("$@")
 PROG_NAME=`basename $0`
+PROG_DIR=`echo "$0" | sed "s/\/${PROG_NAME}$//"`
+
+IFS=$'\n'
+
+
+
+## #################################
+## ##### ANDROID FILE TRANSFER #####
+## #################################
+
+## Transfer files between the computer and Android device
+main() {
+    case "${ARGV[0]}" in
+        ""|"-h"|"--help")
+            usage
+            exit 0
+            ;;
+        "-c"|"--connect")
+            enable_adb
+            exit 0
+            ;;
+        "-r"|"--receive")
+            opt="pull"
+            ;;
+        "-t"|"--transfer")
+            opt="push"
+            ;;
+        "-ls")
+            adb shell ls "$(get_destination)"
+            exit 0
+            ;;
+        *)
+            usage 1>&2
+            exit 1
+            ;;
+    esac
+    
+    enable_adb
+    file_copy "${opt}" 
+}
 
 
 
@@ -91,9 +77,17 @@ PROG_NAME=`basename $0`
 ## ###############################
 
 ## Print program usage
-function print_usage {
-    echo "Usage: ${PROG_NAME} [-h] [[-s] [-r] <src> <dest>]"
-    exit 1
+usage() {
+    echo "Usage: ${PROG_NAME} [option] <argument>"
+    echo 
+    echo "Options:"
+    echo "    -h, --help                    Print program usage"
+    echo "    -r, --receive <src> <dst>     Receive files from the Android device (pull)"
+    echo "    -t, --transfer <src> <dst>    Transfer files to the Android device (push)"
+    echo
+    echo "Arguments:"
+    echo "    <src>                         Source directory"
+    echo "    <dst>                         Destination directory"
 }
 
 
@@ -103,101 +97,93 @@ function print_usage {
 ## #################################
 
 ## Start android debugger
-function android_debugger {
-    echo -n ":: Starting ADB..."
-    adb devices 1> /dev/null
-    echo "Done"
+enable_adb() {
+    echo -n ":: Starting adb..."
+    adb devices 1> /dev/null 
+    
+    if [ "$(is_adb)" == true ]; then
+        echo "Done."
+    else
+        echo "Fail."
+        exit 1
+    fi
 }
 
 
 
 ## Send files onto Android device
-function file_send {
+file_copy() {
     
-    ## All user input
-    local opt=""
+    ## Check directory existence
+    last=$[ ${#ARGV[@]} - 2 ]
+    dst="$(get_destination)"
     
-    ## Number of elements in user input array
-    local n="${#ARGV[@]}"
-    
-    ## Make sure files were specified
-    if [ ${n} -eq 0 ]; then print_usage; exit 1; fi
-    
-    ## User destination
-    local seclast=$[ ${n} - 2 ]
-    local last=$[ ${n} - 1 ]
-    local dest="${ARGV[${last}]}"
-    
-    ## Check that destination directory exists
-    case "${ARGV[0]}" in
-        "-s")
-            local dirExists=`adb shell ls -d "${dest}" \
-                             | grep -c 'No such file or directory'`
-            
-            if [ ${dirExists} -eq 1 ]; then
-                echo "${PROG_NAME}: The destination directory '${dest}' does not exist."
-                exit 1
-            fi
-            
-            opt="push"
-            ;;
-        
-        "-r")
-            if [ ! -d "${dest}" ]; then 
-                echo "${PROG_NAME}: The destination directory '${dest}' does not exist."
-                exit 1
-            fi
-            
-            opt="pull"
-            ;;
-    esac
-    
-    ## Copy files onto Android device
-    for item in "${ARGV[@]:1:${seclast}}"; do
-        if [[ "${item}" != "${dest}" ]]; then
-            echo -n "Copying '${item}'  ->  '${dest}'..." 
-            adb "${opt}" "${item}" "${dest}" 
+    ## Copy files to/from Android device
+    for item in "${ARGV[@]:1:${last}}"; do
+        if [[ "${item}" != "${dst}" ]]; then
+            echo -n "Copying '${item}'  ->  '${dst}'..." 
+            adb "$1" "${item}" "${dst}" 
         fi
     done
 }
 
 
 
-## ########################################################
-## ##### ANDROID FILE TRANSFER PARAMETER VERIFICATION #####
-## ########################################################
+## ########################################
+## ##### SOURCE/DESTINATION DIRECTORY #####
+## ########################################
 
-## Transfer files between the computer and Android device
-function main {
+## Return the destination directory
+get_destination() {
+    last=$[ ${#ARGV[@]} - 1 ]
+    dst="${ARGV[${last}]}"
     
-    ## Check if help requested
-    if [[ "${ARGV[0]}" == "-h" ]]; then print_usage; exit 1; fi
+    if [ "$(is_directory "${dst}")" = false ]; then
+        echo "${PROG_NAME}: Destination directory '${dst}' does not exist." 1>&2
+        echo 1>&2
+        usage 1>&2
+        exit 1
+    fi
     
-    ## Start Android program
-    android_debugger
-    
-    ## Check user input
-    case "${ARGV[0]}" in
-        
-        ## Enable connection between the computer and Android device 
-        "")
-        ;;
-        
-        ## Send files between the computer and Android device
-        "-s"|"-r")
-            file_send 
-            ;;
-        
-        ## Print help screen
-        *)
-            print_usage
-            ;;
-    esac
-    
-    exit 0
+    echo "${dst}"
 }
 
 
 
-## Run the program
+## Check if adb was enabled successfully
+is_adb() {
+    tst=`adb shell ls &> /dev/null`
+    if [ $? -eq 0 ]; then
+        echo true
+    else
+        echo false
+    fi
+}
+
+
+
+## Check if input is a directory
+is_directory() {
+    case "${ARGV[0]}" in
+        "-t")
+            dir=`adb shell ls -d "$1" | grep -c "No such file or directory"`
+            ;;
+        "-r")
+            dir=`ls -d "$1" | grep -c "No such file or directory"`
+            ;;
+    esac
+    
+    if [ "${dir}" -eq 1 ]; then
+        echo false
+    else
+        echo true
+    fi
+}
+
+
+
+## ============
+## Execute Main
+## ============
+
 main 

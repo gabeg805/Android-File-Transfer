@@ -12,7 +12,7 @@ Documentation
 
 Created as an upgrade to the adb interface, this program allows the user to move 
 files en masse using the '*' operator. Further documentation can be found in the 
-header of the program.
+header of the program, as well as the program usage message.
 
 
 
