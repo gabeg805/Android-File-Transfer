@@ -121,7 +121,7 @@ file_copy() {
     ## Copy files to/from Android device
     for item in "${ARGV[@]:1:${last}}"; do
         if [[ "${item}" != "${dst}" ]]; then
-            echo -n "Copying '${item}'  ->  '${dst}'..." 
+            echo -n ":: Copying '${item}'  ->  '${dst}'..." 
             adb "$1" "${item}" "${dst}" 
         fi
     done
