@@ -48,5 +48,4 @@ Potential Problems
 To-Do
 =====
 
-- Have a "list" option to list path contents, this way you don't have to use the adb 
-  interface
+- TBD

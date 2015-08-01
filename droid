@@ -6,9 +6,7 @@
 ## Email:   gabeg@bu.edu
 ## License: The MIT License (MIT)
 ## 
-## Syntax: droid [option] <argument>
-##         
-##         Use '--help' for more details.
+## Syntax: droid [option] [argument]
 ## 
 ## Description: An Android file transfer service.
 ##              
@@ -21,19 +19,19 @@
 ## 
 ## **********************************************************************************
 
-
-
 ## ================
 ## GLOBAL VARIABLES
 ## ================
 
+## Program information
+IFS=$'\n'
 ARGV=("$@")
 PROG_NAME=`basename $0`
 PROG_DIR=`echo "$0" | sed "s/\/${PROG_NAME}$//"`
 
-IFS=$'\n'
-
-
+## Music directories
+COMP_MUSIC_DIR="/mnt/Linux/Share/Music"
+PHONE_MUSIC_DIR="/sdcard/Music"
 
 ## #################################
 ## ##### ANDROID FILE TRANSFER #####
@@ -51,26 +49,26 @@ main() {
             exit 0
             ;;
         "-r"|"--receive")
-            opt="pull"
+            enable_adb
+            file_copy "pull"
             ;;
         "-t"|"--transfer")
-            opt="push"
+            enable_adb
+            file_copy "push"
             ;;
         "-ls")
-            adb shell ls "$(get_destination)"
+            adb shell ls "$(get_destination)" 2> /dev/null
             exit 0
+            ;;
+        "-s"|"--sync")
+            music_sync
             ;;
         *)
             usage 1>&2
             exit 1
             ;;
     esac
-    
-    enable_adb
-    file_copy "${opt}" 
 }
-
-
 
 ## ###############################
 ## ##### PRINT PROGRAM USAGE #####
@@ -84,13 +82,12 @@ usage() {
     echo "    -h, --help                    Print program usage"
     echo "    -r, --receive <src> <dst>     Receive files from the Android device (pull)"
     echo "    -t, --transfer <src> <dst>    Transfer files to the Android device (push)"
+    echo "    -s, --sync                    Sync music files from computer to Android device."
     echo
     echo "Arguments:"
     echo "    <src>                         Source directory"
     echo "    <dst>                         Destination directory"
 }
-
-
 
 ## #################################
 ## ##### ANDROID FILE TRANSFER #####
@@ -100,7 +97,7 @@ usage() {
 enable_adb() {
     echo -n ":: Starting adb..."
     adb devices 1> /dev/null 
-    
+
     if [ "$(is_adb)" == true ]; then
         echo "Done."
     else
@@ -109,16 +106,11 @@ enable_adb() {
     fi
 }
 
-
-
 ## Send files onto Android device
 file_copy() {
-    
-    ## Check directory existence
     last=$[ ${#ARGV[@]} - 2 ]
     dst="$(get_destination)"
-    
-    ## Copy files to/from Android device
+
     for item in "${ARGV[@]:1:${last}}"; do
         if [[ "${item}" != "${dst}" ]]; then
             echo -n ":: Copying '${item}'  ->  '${dst}'..." 
@@ -127,7 +119,77 @@ file_copy() {
     done
 }
 
+## Sync music files from laptop to phone
+music_sync() {
+    echo ":: Syncing music to Android device..."
+    music_sync_remove_songs
+    music_sync_add_songs
+}
 
+## Remove songs that don't need to be sync-ed
+music_sync_remove_songs() {
+    all_playlists=(`ls -1 "${COMP_MUSIC_DIR}"`)
+    all_phone_files=(`adb shell ls "${PHONE_MUSIC_DIR}" | sed 's/\n//g; s/\r//g'`)
+
+    ## Search through phone music contents for unmatched files
+    for file in "${all_phone_files[@]}"; do
+        playlist_match=`echo "${all_playlists[*]}" | grep -x -c "${file}"`
+
+        ## Found playlist match
+        if [ ${playlist_match} -eq 1 ]; then
+            all_content=(`adb shell ls "${PHONE_MUSIC_DIR}/${file}" | sed 's/\n//g; s/\r//g'`)
+            all_songs=(`ls -1 "${COMP_MUSIC_DIR}/${file}"`)
+
+            ## Remove unmatched songs
+            for content in "${all_content[@]}"; do
+                song_match=`echo "${all_songs[*]}" | grep -x -c "${content}"`
+
+                if [ ${song_match} -ne 1 ]; then
+                    echo -n ":: Removing '${file}'..."
+                    adb shell rm -rf "${PHONE_MUSIC_DIR}/${file}/${content}"
+                    echo "Done."
+                fi
+            done
+        ## Remove unmatched playlist
+        else
+            echo -n ":: Removing '${file}'..."
+            adb shell rm -rf "${PHONE_MUSIC_DIR}/${file}"
+            echo "Done."
+        fi
+    done
+}
+
+## Add songs that need to be sync-ed
+music_sync_add_songs() {
+    all_playlists=(`ls -1 "${COMP_MUSIC_DIR}"`)
+    all_phone_files=(`adb shell ls "${PHONE_MUSIC_DIR}" | sed 's/\n//g; s/\r//g'`)
+
+    ## Search through phone music contents for unmatched files
+    for playlist in "${all_playlists[@]}"; do
+        playlist_match=`echo "${all_phone_files[*]}" | grep -x -c "${playlist}"`
+
+        ## Found playlist match
+        if [ ${playlist_match} -eq 1 ]; then
+            all_content=(`adb shell ls "${PHONE_MUSIC_DIR}/${playlist}" | sed 's/\n//g; s/\r//g'`)
+            all_songs=(`ls -1 "${COMP_MUSIC_DIR}/${playlist}"`)
+
+            ## Add unmatched songs
+            for song in "${all_songs[@]}"; do
+                song_match=`echo "${all_content[*]}" | grep -x -c "${song}"`
+
+                if [ ${song_match} -ne 1 ]; then
+                    echo -n ":: Adding song to playlist '${song}' -> '${playlist}'..."
+                    adb push "${COMP_MUSIC_DIR}/${playlist}/${song}" "${PHONE_MUSIC_DIR}/${playlist}/"
+                fi
+            done
+        ## Add unmatched playlist
+        else
+            echo -n ":: Adding playlist '${playlist}'..."
+            adb shell mkdir "${PHONE_MUSIC_DIR}/${playlist}"
+            echo "Done."
+        fi
+    done
+}
 
 ## ########################################
 ## ##### SOURCE/DESTINATION DIRECTORY #####
@@ -137,18 +199,14 @@ file_copy() {
 get_destination() {
     last=$[ ${#ARGV[@]} - 1 ]
     dst="${ARGV[${last}]}"
-    
+
     if [ "$(is_directory "${dst}")" = false ]; then
         echo "${PROG_NAME}: Destination directory '${dst}' does not exist." 1>&2
-        echo 1>&2
-        usage 1>&2
         exit 1
     fi
-    
+
     echo "${dst}"
 }
-
-
 
 ## Check if adb was enabled successfully
 is_adb() {
@@ -160,27 +218,17 @@ is_adb() {
     fi
 }
 
-
-
 ## Check if input is a directory
 is_directory() {
-    case "${ARGV[0]}" in
-        "-t")
-            dir=`adb shell ls -d "$1" | grep -c "No such file or directory"`
-            ;;
-        "-r")
-            dir=`ls -d "$1" | grep -c "No such file or directory"`
-            ;;
-    esac
-    
-    if [ "${dir}" -eq 1 ]; then
-        echo false
-    else
+    dir=`adb shell ls -d "${1}" 2>&1 \
+             | grep -c "No such file or directory\|device not found"`
+
+    if [ "${dir}" -eq 0 ]; then
         echo true
+    else
+        echo false
     fi
 }
-
-
 
 ## ============
 ## Execute Main
